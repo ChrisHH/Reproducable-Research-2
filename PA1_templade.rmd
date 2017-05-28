@@ -1,0 +1,89 @@
+## Setting up the working directory and read the data
+
+```{r readdata, echo=TRUE}
+setwd('/Users/cjaehn/Documents/Reproducable Research')
+activitydata<-read.csv("activity.csv",header=TRUE)
+```
+
+## What is mean total number of steps taken per day?
+
+For this part of the assignment, you can ignore the missing values in the dataset.
+
+1. Calculate the total number of steps taken per day
+
+2. If you do not understand the difference between a histogram and a barplot, research the difference between them. Make a histogram of the total number of steps taken each day
+
+3. Calculate and report the mean and median of the total number of steps taken per day
+
+```{r mean, echo=TRUE}
+perday<-aggregate(activitydata$steps, FUN="sum", by = list(activitydata$date), na.rm = TRUE)
+
+hist(perday$x, xlab="steps per day", ylab="Frequency", main="Histogram of total number of steps taken per day")
+mean(perday$x,na.rm=TRUE)
+median(perday$x, na.rm=TRUE)
+```
+
+## What is the average daily activity pattern?
+
+1. Make a time series plot (i.e. 𝚝𝚢𝚙𝚎 = "𝚕") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r activity, echo=TRUE}
+perinterval<-aggregate(activitydata$steps, FUN="sum", by = list(activitydata$interval), na.rm = TRUE)
+
+plot(perinterval$Group.1, perinterval$x, type="l", col="red", lwd=2)
+perinterval[perinterval[,'x'] == max(perinterval$x),]
+```
+
+## Imputing missing values
+
+Note that there are a number of days/intervals where there are missing values (coded as 𝙽𝙰). The presence of missing days may introduce bias into some calculations or summaries of the data.
+
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with 𝙽𝙰s)
+
+2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r natreatment, echo=TRUE}
+summary(activitydata)
+
+
+perinterval<-aggregate(activitydata$steps, FUN="mean", by = list(activitydata$interval), na.rm = TRUE)
+
+cleanactivitydata <- activitydata 
+for (i in 1:nrow(cleanactivitydata)) {
+    if (is.na(cleanactivitydata$steps[i])) {
+        cleanactivitydata$steps[i] <- perinterval[perinterval$Group.1==cleanactivitydata$interval[i],]$x
+    }
+}
+
+perday<-aggregate(cleanactivitydata$steps, FUN="sum", by = list(cleanactivitydata$date), na.rm = TRUE)
+
+hist(perday$x, xlab="steps per day", ylab="Frequency", main="Histogram of total number of steps taken per day", breaks = 500)
+
+mean(perday$x,na.rm=TRUE)
+median(perday$x, na.rm=TRUE)
+
+
+```
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+For this part the 𝚠𝚎𝚎𝚔𝚍𝚊𝚢𝚜() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+1. Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+2. Make a panel plot containing a time series plot (i.e. 𝚝𝚢𝚙𝚎 = "𝚕") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). 
+
+```{r patterns}
+library("ggplot2")
+cleanactivitydata$weekday<- ifelse(as.POSIXlt(cleanactivitydata$date)$wday %in% c(0,6), "mo-fr","sat-sun")
+
+perinterval<-aggregate(steps ~ interval + weekday, data=cleanactivitydata, mean)
+par(mfrow=c(2,1)) 
+plot(perinterval[perinterval$weekday=="mo-fr",]$interval, perinterval[perinterval$weekday=="mo-fr",]$steps, type="l", col="red", lwd=2, xlab="Steps per intervall", ylab="Count", main="Week")
+plot(perinterval[perinterval$weekday=="sat-sun",]$interval, perinterval[perinterval$weekday=="sat-sun",]$steps, type="l", col="red", lwd=2,xlab="Steps", ylab="Count", main="Weekend")
+```
